@@ -56,3 +56,30 @@ jobs:
         run: |
           aws s3 cp data/premier_league.parquet \
             s3://premier-league-analytics-mps/processed/parquet/premier_league.parquet
+
+  notify:
+    needs: run-etl
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - name: Send SNS email notification
+        env:
+          ETL_STATUS: ${{ needs.run-etl.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          aws sns publish \
+            --topic-arn "arn:aws:sns:ap-south-1:621788589162:premier-league-etl-notifications" \
+            --subject "Premier League ETL: ${ETL_STATUS}" \
+            --message "Premier League Analytics ETL has finished.
+
+          Result: ${ETL_STATUS}
+          Trigger: ${TRIGGER}
+          Workflow run: ${RUN_URL}"
