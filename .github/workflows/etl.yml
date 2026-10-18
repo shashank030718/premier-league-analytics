@@ -1,11 +1,16 @@
 
-name: Premier League ETL CI
+name: Premier League ETL CI/CD
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   run-etl:
@@ -25,3 +30,26 @@ jobs:
 
       - name: Run ETL pipeline
         run: python src/main.py
+
+      - name: Configure AWS credentials using OIDC
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - name: Verify AWS identity
+        if: github.event_name != 'pull_request'
+        run: aws sts get-caller-identity
+
+      - name: Upload CSV to S3
+        if: github.event_name != 'pull_request'
+        run: |
+          aws s3 cp data/premier_league.csv \
+            s3://premier-league-analytics-mps/processed/premier_league.csv
+
+      - name: Upload Parquet to S3
+        if: github.event_name != 'pull_request'
+        run: |
+          aws s3 cp data/premier_league.parquet \
+            s3://premier-league-analytics-mps/processed/parquet/premier_league.parquet
