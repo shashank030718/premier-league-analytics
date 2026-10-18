@@ -77,7 +77,7 @@ jobs:
         run: |
           aws sns publish \
             --topic-arn "arn:aws:sns:ap-south-1:621788589162:premier-league-etl-notifications" \
-            --subject "Premier League ETL: ${ETL_STATUS}" \
+            --subject "PL ETL TEST - ${ETL_STATUS}" \
             --message "Premier League Analytics ETL has finished.
 
           Result: ${ETL_STATUS}
